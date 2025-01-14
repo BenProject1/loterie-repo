@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "bolt-qr-code-320e1",
+    "dist": "bolt-qr-code-320e1"
+  },
+  "targets": {},
+  "etags": {}
+}

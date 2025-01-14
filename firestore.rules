@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fonction pour vérifier si l'utilisateur est le propriétaire du commerce
+    function isBusinessOwner(businessId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/businesses/$(businessId)) &&
+             request.auth.uid == get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId;
+    }
+
+    // Collection businesses
+    match /businesses/{businessId} {
+      allow read: if true; // Lecture publique pour permettre aux utilisateurs de voir les infos du commerce
+      allow write: if isBusinessOwner(businessId);
+
+      // Sous-collection rewards
+      match /rewards/{rewardId} {
+        allow read: if true;
+        allow write: if isBusinessOwner(businessId);
+      }
+
+      // Sous-collection participations
+      match /participations/{participationId} {
+        allow read: if isBusinessOwner(businessId);
+        allow create: if true; // Permettre aux utilisateurs de créer une participation
+        allow update, delete: if false;
+      }
+
+      // Sous-collection loyalty_tiers
+      match /loyalty_tiers/{tierId} {
+        allow read: if true;
+        allow write: if isBusinessOwner(businessId);
+      }
+    }
+
+    // Collection users
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if true;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false;
+
+      // Sous-collection loyalty_points
+      match /loyalty_points/{businessId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if isBusinessOwner(businessId);
+      }
+    }
+
+    // Collection reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}
